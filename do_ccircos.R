@@ -6,7 +6,7 @@ par(mar=rep(0,4), bg = "black")
 circos.clear()
 
 #basic circos graphic parameters
-circos.par(cell.padding=c(0,0,0,0), track.margin=c(0,0), start.degree = 0, gap.degree = 2, points.overflow.warning=FALSE)
+circos.par(cell.padding=c(0,0,0,0), track.margin=c(0,0), start.degree = 0, gap.degree = 2)
 
 #sector details
 circos.initialize(factors = df1$country, xlim = cbind(df1$xmin, df1$xmax))
@@ -48,73 +48,81 @@ for(i in unique(df1$region)){
 
 
 #plot sectors
-circos.trackPlotRegion(ylim = c(0, 1), factors = df1$country, track.height=0.05, bg.border = NA, bg.col = NA, bg.lty =0, bg.lwd=0.0001, panel.fun = function(x, y) {
-  #select details of current sector
-  name = get.cell.meta.data("sector.index")
-  i = get.cell.meta.data("sector.numeric.index")
-  xlim = get.cell.meta.data("xlim")
-  ylim = get.cell.meta.data("ylim")
+circos.trackPlotRegion(ylim = c(0, 1), factors = df1$country, track.height=0.05, bg.border = NA, bg.col = NA, bg.lty =0, bg.lwd=0.0001,
+                       #panel.fun for each sector
+                       panel.fun = function(x, y) {
+                         #select details of current sector
+                         name = get.cell.meta.data("sector.index")
+                         i = get.cell.meta.data("sector.numeric.index")
+                         xlim = get.cell.meta.data("xlim")
+                         ylim = get.cell.meta.data("ylim")
                          
-  #text direction (dd) and adjusmtents (aa)
-  theta = circlize(mean(xlim), 1.3)[1, 1] %% 360
-  dd <- ifelse(theta < 90 || theta > 270, "clockwise", "reverse.clockwise")
-  aa = c(1, 0.5)
-  if(theta < 90 || theta > 270)  aa =c(0, 0.5)
-  xx = mean(xlim)
-  if(name %in% df1$country[df1$adj!=0]) xx <- df1$adj[name==df1$country]
-  
-  #pdf
-  #circos.text(x=xx, y=1.1, labels=name, direction = dd, cex=5, adj=aa, col="white")  
-                       
-  #png
-  circos.text(x=xx, y=1.1, labels=name, facing = dd, cex=0.6, adj=aa, col="white")  
-                       
-  #plot main sectors for origin
-  df1$sum1 <- numeric(n)
-  for(j in 1:n){
-    if(m[i,j]>0){
-        circos.rect(xleft=df1$sum1[i], ybottom=ylim[1], xright=df1$sum1[i] + abs(m[i, j]), ytop=ylim[2], col = df1$lcol[j], border=NA)  
-        df1$sum1[i] = df1$sum1[i] + abs(m[i, j])
-    }
-  }
-  
-  #plot arrow heads for destination
-  df1$sum2 <- rowSums(m)
-  for(ii in 1:n){
-    if(colSums(m)[i]>0){
-      d1 = c(df1$sum1[i], df1$sum1[i] + 0.5*m[ii, i], df1$sum1[i] + m[ii, i])
-      d2 = c(0, 0.25, 0)
-      circos.lines(d1, d2, sector.index = name, type = "l", area = TRUE, col = df1$lcol[i], border=NA)
-      df1$sum1[i] = df1$sum1[i] + abs(m[ii, i])
-    }
-  }
-
-  #line all the way around
- if(subset(df1, country==name)[,paste0("wc",year)]==1){
-   circos.rect(xleft=xlim[1], ybottom=0.7, xright=xlim[2], ytop=0.85, col = df1$rcol[i], border = NA) 
-  }
- 
- circos.rect(xleft=xlim[1], ybottom=0.85, xright=xlim[2], ytop=1, col = "black", border = NA)
+                         #text direction (dd) and adjusmtents (aa)
+                         theta = circlize(mean(xlim), 1.3)[1, 1] %% 360
+                         dd <- ifelse(theta < 90 || theta > 270, "vertical_right", "vertical_left")
+                         aa = c(1, 0.5)
+                         if(theta < 90 || theta > 270)  aa =c(0, 0.5)
+                         xx = mean(xlim)
+                         if(name %in% df1$country[df1$adj!=0]) xx <- df1$adj[name==df1$country]
                          
-})
+                         #pdf
+                         #circos.text(x=xx, y=1.1, labels=name, direction = dd, cex=5, adj=aa, col="white")  
+                         
+                         #png
+                         circos.text(x=xx, y=1.1, labels=name, direction = dd, cex=0.6, adj=aa, col="white")  
+                         
+                         #plot main sectors for origin
+                         df1$sum1 <- numeric(n)
+                         for(j in 1:n){
+                           if(m[i,j]>0){
+                             circos.rect(xleft=df1$sum1[i], ybottom=ylim[1], 
+                                         xright=df1$sum1[i] + abs(m[i, j]), ytop=ylim[2], col = df1$lcol[j], border=NA)  
+                             df1$sum1[i] = df1$sum1[i] + abs(m[i, j])
+                           }
+                         }
+                         
+                         #plot arrow heads for destination
+                         df1$sum2 <- rowSums(m)
+                         for(ii in 1:n){
+                           if(colSums(m)[i]>0){
+                             d1 = c(df1$sum1[i], df1$sum1[i] + (abs(m[ii, i]))/2, df1$sum1[i] + abs(m[ii, i]))
+                             d2 = c(0, 0.25, 0)
+                             circos.polygon(d1, d2, col = df1$lcol[i], border=NA) 
+                             df1$sum1[i] = df1$sum1[i] + abs(m[ii, i])
+                           }
+                         }
+                         
+                         #blank in part of main sector
+                         #circos.rect(xleft=xlim[1], ybottom=ylim[1], xright=xlim[2]-rowSums(m)[i], ytop=ylim[1]+0.45, col = "white", border = "white")
+                         #circos.rect(xleft=xlim[1], ybottom=ylim[1], xright=xlim[2], ytop=ylim[1]+0.45, col = "white", border = "white")
+                         #circos.rect(xleft=xlim[2], ybottom=ylim[1], xright=xlim[2]-rowSums(m)[i], ytop=0.3, col = "white", border = "white")
+                         
+                         #white line all the way around
+                         #circos.rect(xleft=xlim[1], ybottom=0.85, xright=xlim[2], ytop=1, col = "white", border = "white")
+                         circos.rect(xleft=xlim[1], ybottom=0.85, xright=xlim[2], ytop=1, col = "black", border = "black")
+                         
+#                          if(name=="Spain"){
+#                            circos.rect(xleft=xlim[2]-23+8, ybottom=0.9, xright=xlim[2], ytop=1, col = "white", border = "black")
+#                          }
+                           
+                         
+                         #plot axis
+                         #circos.axis(labels.cex=0.4, major.at=seq(from=0,to=floor(df1$xmax)[i],by=15), labels.away.percentage = 0.15)
+                       })
 
 text(-1,1,"2014 World Cup Squads", col="white", cex=1.4, pos=4)
 text(-1,0.94,"Leagues to National Teams", col="white", cex=1, pos=4)
 text(-1,0.89,"by Guy J. Abel", col="white", cex=0.7, pos=4)
 
-text(1,1.02,"How to Read the Plot:", col="white", cex=0.7, pos=2)
+text(1,1.02,"How to Read:", col="white", cex=0.7, pos=2)
 x=0.99 
-text(1,x,   "Colours based on the shirt of each team in the 2014 World Cup", col="white", cex=0.5, pos=2)
-text(1,x-0.03,        "Lines represent the connections between the country", col="white", cex=0.5, pos=2)
-text(1,x-0.03*2,                "in which players play their club football", col="white", cex=0.5, pos=2)
-text(1,x-0.03*3,                   "(at the lines base) and their national", col="white", cex=0.5, pos=2)
-text(1,x-0.03*4,                          "teams (at the arrow head). Line", col="white", cex=0.5, pos=2)
-text(1,x-0.03*5,                               "thickness represent number", col="white", cex=0.5, pos=2)
-text(1,x-0.03*6,                                               "of players", col="white", cex=0.5, pos=2)
-#text(1,x-0.03*7,                                                  "", col="white", cex=0.5, pos=2)
-
-
-
+text(1,x,     "Outgoing players are denoted by the colour of their national", col="white", cex=0.5, pos=2)
+text(1,x-0.03,          "team. At base of a players arrow is the country of", col="white", cex=0.5, pos=2)
+text(1,x-0.03*2,                 "their club team. At the head of the arrow", col="white", cex=0.5, pos=2)
+text(1,x-0.03*3,                        "is the players national squad. The", col="white", cex=0.5, pos=2)
+text(1,x-0.03*4,                          "thicker lines represent stonger", col="white", cex=0.5, pos=2)
+text(1,x-0.03*5,                               "connections between leagues", col="white", cex=0.5, pos=2)
+text(1,x-0.03*6,                                       "and national squads", col="white", cex=0.5, pos=2)
 
 
 text(-1,-1.01,c("Plot produced in R. Data from:"), pos=4, cex=0.5, col="white")
@@ -145,7 +153,7 @@ for(k in 1:nrow(df2)){
   #plot link
   circos.link(sector.index1=df1$country[i], point1=c(df1$sum1[i], df1$sum1[i] + abs(m[i, j])),
               sector.index2=df1$country[j], point2=c(df1$sum2[j], df1$sum2[j] + abs(m[i, j])),
-              col = df1$lcol[j], border = NA)
+              col = df1$lcol[j], top.ratio=0.65, top.ratio.low=0.67)
 
   #update sum1 and sum2 for use when plotting the next link
   df1$sum1[i] = df1$sum1[i] + abs(m[i, j])
@@ -156,6 +164,16 @@ for(k in 1:nrow(df2)){
 dev.copy2pdf(file = paste0(wd,"wc",year,".pdf"), height=100, width=100)
 
 dev.copy(png, file = paste0(wd,"wc",year,".png"), width=10, height=10, units="in", res=600)
+#dev.copy(png, file = paste0(wd,"wc",year,".png"), width=10, height=10, units="in", res=150)
 dev.off()
 
 file.show(paste0(wd,"wc",year,".png"))
+
+
+# #out first
+# blank in part of main sector
+# circos.rect(min(xlim)+rowSums(m)[i], min(ylim), max(xlim), 0.3, col = "white", border = "white")
+
+# #out first
+# df1$sum1 <- numeric(n)
+# df1$sum2 <- colSums(m)
